@@ -23,6 +23,17 @@ import { getNoteSales } from "@/lib/notes.functions";
 import { StyledSelect } from "@/components/StyledSelect";
 import { CoverWallpaperField } from "@/components/admin/CoverWallpaperField";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   PurchaseAnalyticsCard,
   ReviewModerationCard,
   TestingToolsCard,
@@ -574,16 +585,36 @@ function NoteRow({ note, sales, onDone }: { note: Note; sales: number; onDone: (
           {note.hidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
           {note.hidden ? "Show" : "Hide"}
         </button>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => {
-            if (confirm(`Delete "${note.title}" permanently?`)) void run(() => deleteNote(note.id));
-          }}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-destructive ring-1 ring-destructive/40"
-        >
-          <Trash2 className="h-3 w-3" /> Delete
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-destructive ring-1 ring-destructive/40"
+            >
+              <Trash2 className="h-3 w-3" /> Delete
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-2xl border-border bg-card p-5 text-card-foreground shadow-2xl">
+            <AlertDialogHeader className="text-left">
+              <AlertDialogTitle>Delete this document?</AlertDialogTitle>
+              <AlertDialogDescription>
+                “{note.title}” will be permanently removed. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:space-x-0">
+              <AlertDialogCancel className="mt-0 border-border bg-background text-foreground hover:bg-muted hover:text-foreground">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => void run(() => deleteNote(note.id))}
+              >
+                <Trash2 /> Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
