@@ -248,7 +248,7 @@ export function RankTitleBanner({
       decoding="async"
       onError={() => setFailed(true)}
       className={cn(
-        "block h-auto max-h-8 max-w-full w-auto object-contain drop-shadow-md select-none transition-all sm:max-h-10",
+        "block h-auto w-full object-contain drop-shadow-md select-none transition-all",
         !unlocked && "opacity-70 grayscale brightness-90",
         className,
       )}
