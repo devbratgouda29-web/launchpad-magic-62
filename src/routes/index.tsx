@@ -26,8 +26,44 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: SplashPage,
+  component: SplashRoute,
 });
+
+/**
+ * Safety wrapper: if anything in the splash screen throws while rendering, we
+ * show a minimal branded message and send the user straight to /home instead
+ * of leaving a black screen behind.
+ */
+function SplashRoute() {
+  return (
+    <ErrorBoundary fallback={() => <SplashFallback />}>
+      <SplashPage />
+    </ErrorBoundary>
+  );
+}
+
+function SplashFallback() {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (typeof window !== "undefined") window.location.assign("/home");
+    }, 600);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
+      <p className="text-sm font-black uppercase tracking-[0.28em] text-amber-400">
+        From The Last Bench
+      </p>
+      <p className="mt-3 text-sm text-muted-foreground">Opening your home screen…</p>
+      <a
+        href="/home"
+        className="mt-6 inline-flex items-center justify-center rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-black"
+      >
+        Continue
+      </a>
+    </div>
+  );
+}
 
 /**
  * Inline emblem fallback. If the CDN asset ever fails to resolve, we swap in
