@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RankShieldFrame } from "@/components/RankShield";
+import { RankShieldFrame, RankTitleBanner } from "@/components/RankShield";
 import { useAuth } from "@/hooks/use-auth";
 // Celebration overlay is only mounted on a rank-up — keep it out of the initial chunk.
 const RankUpCelebration = lazy(() => import("@/components/RankUpCelebration").then((m) => ({ default: m.RankUpCelebration })));
@@ -588,9 +588,11 @@ function ClockView({
         </div>
 
         {/* Side-by-side rank identity: shield + title */}
-        <div className="flex w-full max-w-full items-center justify-center gap-4">
+        <div className="flex w-full max-w-full items-center justify-center gap-3 px-2 sm:gap-4 sm:px-4">
           <RankShieldImg level={milestone.level} unlocked className="h-24 max-h-24 w-auto" />
-          <RankTitleImg level={milestone.level} title={milestone.name} unlocked className="flex-1" />
+          <div className="flex min-w-0 flex-1 items-center justify-center">
+            <RankTitleBanner level={milestone.level} title={milestone.name} unlocked />
+          </div>
         </div>
         <p className="max-w-sm text-center text-[13px] italic leading-relaxed text-muted-foreground">
           {milestone.desc}
@@ -763,7 +765,7 @@ function RankColumnView({
               type="button"
               onClick={() => onSelectRank(m)}
               className={cn(
-                "flex flex-col justify-between items-center h-full overflow-hidden rounded-2xl border px-3 py-4 text-left transition-colors hover:brightness-110",
+                "flex h-full flex-col items-center justify-between overflow-hidden rounded-2xl border px-4 py-4 text-left transition-colors hover:brightness-110 sm:px-5",
                 isCurrent
                   ? "border-accent-amber bg-accent-amber/10 ring-2 ring-accent-amber shadow-[0_0_24px_-2px_oklch(0.78_0.14_78/0.6)]"
                   : unlocked
@@ -782,8 +784,8 @@ function RankColumnView({
               </div>
 
               {/* Title artwork */}
-              <div className="flex w-full max-w-full flex-col items-center gap-2">
-                <RankTitleImg level={m.level} title={m.name} unlocked={unlocked} />
+              <div className="flex w-full max-w-full flex-col items-center gap-2 px-1">
+                <RankTitleBanner level={m.level} title={m.name} unlocked={unlocked} />
 
                 {/* Level + status */}
                 <div className="flex w-full flex-col items-center gap-1.5">
@@ -902,7 +904,7 @@ function RankModal({
   );
 }
 
-// ---------- Shield / Title image assets with graceful fallbacks ----------
+// ---------- Shield image assets with graceful fallbacks ----------
 function RankShieldImg({
   level,
   unlocked = true,
@@ -944,28 +946,4 @@ function RankShieldImg({
   );
 }
 
-function RankTitleImg({
-  level,
-  title,
-  unlocked = true,
-  className,
-}: {
-  level: number;
-  title: string;
-  unlocked?: boolean;
-  className?: string;
-}) {
-  return (
-    <span
-      data-rank-level={level}
-      className={cn(
-        "flex min-w-0 max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase text-accent-amber drop-shadow-md transition-all sm:text-lg",
-        !unlocked && "opacity-70 grayscale brightness-90",
-        className,
-      )}
-    >
-      {title}
-    </span>
-  );
-}
 
