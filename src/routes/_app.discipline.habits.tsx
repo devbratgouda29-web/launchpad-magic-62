@@ -588,9 +588,9 @@ function ClockView({
         </div>
 
         {/* Side-by-side rank identity: shield + title */}
-        <div className="flex w-full items-center justify-center gap-4">
+        <div className="flex w-full max-w-full items-center justify-center gap-4">
           <RankShieldImg level={milestone.level} unlocked className="h-24 max-h-24 w-auto" />
-          <RankTitleImg level={milestone.level} title={milestone.name} unlocked className="h-10 md:h-12 w-full" />
+          <RankTitleImg level={milestone.level} title={milestone.name} unlocked className="flex-1" />
         </div>
         <p className="max-w-sm text-center text-[13px] italic leading-relaxed text-muted-foreground">
           {milestone.desc}
@@ -782,7 +782,7 @@ function RankColumnView({
               </div>
 
               {/* Title artwork */}
-              <div className="flex w-full flex-col items-center gap-2">
+              <div className="flex w-full max-w-full flex-col items-center gap-2">
                 <RankTitleImg level={m.level} title={m.name} unlocked={unlocked} />
 
                 {/* Level + status */}
@@ -960,7 +960,7 @@ function RankTitleImg({
     return (
       <span
         className={cn(
-          "block w-[88%] h-auto min-h-[40px] mx-auto my-3 truncate text-center text-xs font-black uppercase tracking-wider",
+          "flex max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase sm:text-lg",
           !unlocked && "opacity-70 grayscale brightness-90",
           className,
         )}
@@ -977,7 +977,7 @@ function RankTitleImg({
       decoding="async"
       onError={() => setFailed(true)}
       className={cn(
-        "w-[88%] h-auto max-h-24 mx-auto object-contain my-3 drop-shadow-md select-none transition-all",
+        "block h-auto w-auto max-w-full object-contain drop-shadow-md select-none transition-all",
         !unlocked && "opacity-70 grayscale brightness-90",
         className,
       )}

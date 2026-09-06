@@ -3,6 +3,7 @@ import { Download, Flame, CheckCircle2, Loader2, Lock, Trophy } from "lucide-rea
 
 import { WeeklyBadge } from "@/components/WeeklyBadge";
 import { CoreShield } from "@/components/CoreShield";
+import { HabitRankShield } from "@/components/RankShield";
 import {
   WEEKLY_TIERS,
   evaluateWeeklyTier,
@@ -20,18 +21,6 @@ import { cn } from "@/lib/utils";
 const GOLD = "#D4AF37";
 const BAR_COLOR = "#5EEAD4";
 const THRESHOLDS = [30, 40, 50, 60, 70];
-const HABIT_SHIELD_TIERS = [
-  { min: 60, color: "#F5F3FF", glow: "rgba(245,243,255,0.55)" },
-  { min: 30, color: "#E2E8F0", glow: "rgba(226,232,240,0.5)" },
-  { min: 15, color: "#7DD3FC", glow: "rgba(125,211,252,0.55)" },
-  { min: 7, color: "#B0B4BC", glow: "rgba(176,180,188,0.5)" },
-  { min: 1, color: "#CD7F32", glow: "rgba(205,127,50,0.55)" },
-  { min: 0, color: "#64748B", glow: "rgba(100,116,139,0.4)" },
-];
-function habitShield(streak: number) {
-  return HABIT_SHIELD_TIERS.find((t) => streak >= t.min) ?? HABIT_SHIELD_TIERS[5];
-}
-
 type TabId = "overview" | "ledger" | "hierarchy";
 
 
@@ -303,13 +292,12 @@ function OverviewTab({ habits }: { habits: HabitLite[] }) {
             {(habits ?? []).slice(0, 8).map((h, i) => {
               const streak = Math.max(0, Number(h?.streak) || 0);
               const name = h?.name ?? `Habit ${i + 1}`;
-              const sh = habitShield(streak);
               return (
                 <div
                   key={`${name}-${i}`}
                   className="flex w-full items-center gap-4 rounded-2xl border border-border bg-background/50 px-4 py-3"
                 >
-                  <CoreShield color={sh?.color ?? "#64748B"} glow={sh?.glow ?? "rgba(100,116,139,0.4)"} size={68} label={name} />
+                  <HabitRankShield streak={streak} label={name} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-bold leading-tight">
                       {h?.emoji ? `${h.emoji} ` : ""}
@@ -342,7 +330,7 @@ function OverviewTab({ habits }: { habits: HabitLite[] }) {
                 label={g?.label ?? ""}
                 tier={([1, 2, 3, 4, 5] as const)[Number(String(g?.key ?? "t1").slice(1)) - 1] ?? 1}
               />
-              <p className="text-[8px] font-black uppercase leading-tight tracking-[0.06em]" style={{ color: g?.color }}>
+              <p className="flex max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase sm:text-lg" style={{ color: g?.color }}>
 
                 {g?.label}
               </p>

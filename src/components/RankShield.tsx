@@ -179,6 +179,36 @@ function HeroShieldImg({ level, tier }: { level: number; tier: Tier }) {
   );
 }
 
+/** The Discipline habit-rank thresholds, shared by Performance shield cards. */
+const HABIT_RANK_STREAKS = [1, 3, 7, 15, 30, 45, 60, 90, 120, 150, 180, 210, 240, 300, 365] as const;
+
+export function habitRankLevel(streak: number): number {
+  let level = 1;
+  for (let index = 0; index < HABIT_RANK_STREAKS.length; index += 1) {
+    const threshold = HABIT_RANK_STREAKS[index];
+    if (threshold != null && streak >= threshold) level = index + 1;
+    else break;
+  }
+  return level;
+}
+
+/** Compact unlocked 3D habit shield used outside the Discipline rank gallery. */
+export function HabitRankShield({ streak, label }: { streak: number; label: string }) {
+  const level = habitRankLevel(streak);
+  return (
+    <img
+      src={`/shields/shield-${level}.png`}
+      alt={`${label} — Level ${level} shield`}
+      width={68}
+      height={68}
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      className="h-[68px] w-[68px] shrink-0 object-contain drop-shadow-xl select-none"
+    />
+  );
+}
+
 /** Prominent top-of-dashboard rank shield frame. */
 function RankShieldFrameBase({
 
@@ -228,7 +258,7 @@ function RankShieldFrameBase({
         <HeroShieldImg level={level} tier={tier} />
 
         <h2
-          className="text-center text-lg font-black uppercase tracking-[0.14em]"
+          className="flex max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase sm:text-lg"
           style={{ color: tier.stroke }}
         >
           {rankName}
