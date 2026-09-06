@@ -209,6 +209,51 @@ export function HabitRankShield({ streak, label }: { streak: number; label: stri
   );
 }
 
+/** Original metallic rank-name artwork, scaled to preserve long titles on one line. */
+export function RankTitleBanner({
+  level,
+  title,
+  unlocked = true,
+  className,
+}: {
+  level: number;
+  title: string;
+  unlocked?: boolean;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span
+        className={cn(
+          "flex min-w-0 max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase text-accent-amber sm:text-lg",
+          !unlocked && "opacity-70 grayscale brightness-90",
+          className,
+        )}
+      >
+        {title}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`/shields/title-${level}.png`}
+      alt={title}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailed(true)}
+      className={cn(
+        "block h-auto max-h-8 max-w-full w-auto object-contain drop-shadow-md select-none transition-all sm:max-h-10",
+        !unlocked && "opacity-70 grayscale brightness-90",
+        className,
+      )}
+      draggable={false}
+    />
+  );
+}
+
 /** Prominent top-of-dashboard rank shield frame. */
 function RankShieldFrameBase({
 
@@ -257,12 +302,9 @@ function RankShieldFrameBase({
 
         <HeroShieldImg level={level} tier={tier} />
 
-        <h2
-          className="flex max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase sm:text-lg"
-          style={{ color: tier.stroke }}
-        >
-          {rankName}
-        </h2>
+        <div className="flex w-full items-center justify-center px-3 sm:px-5">
+          <RankTitleBanner level={level} title={rankName} />
+        </div>
 
 
         <div className="w-full">
