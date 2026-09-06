@@ -606,13 +606,12 @@ function ClockView({
         </div>
 
         {/* Current rank title artwork only; the large shield already appears above. */}
-        <div className="flex w-full max-w-full items-center justify-center px-1 sm:px-4">
+        <div className="w-full max-w-xs sm:max-w-sm mx-auto">
           <RankTitleBanner
             level={milestone.level}
             title={milestone.name}
             unlocked
             eager
-            className="max-h-12 sm:max-h-14"
           />
         </div>
         <p className="max-w-sm text-center text-[13px] italic leading-relaxed text-muted-foreground">
