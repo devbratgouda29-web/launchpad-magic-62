@@ -214,11 +214,13 @@ export function RankTitleBanner({
   level,
   title,
   unlocked = true,
+  eager = false,
   className,
 }: {
   level: number;
   title: string;
   unlocked?: boolean;
+  eager?: boolean;
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
@@ -241,7 +243,8 @@ export function RankTitleBanner({
     <img
       src={`/shields/title-${level}.png`}
       alt={title}
-      loading="lazy"
+      loading={eager ? "eager" : "lazy"}
+      fetchPriority={eager ? "high" : "auto"}
       decoding="async"
       onError={() => setFailed(true)}
       className={cn(
@@ -301,11 +304,6 @@ function RankShieldFrameBase({
         </span>
 
         <HeroShieldImg level={level} tier={tier} />
-
-        <div className="flex w-full items-center justify-center px-3 sm:px-5">
-          <RankTitleBanner level={level} title={rankName} />
-        </div>
-
 
         <div className="w-full">
           <div className="mb-1.5 flex items-center justify-between text-[11px]">
