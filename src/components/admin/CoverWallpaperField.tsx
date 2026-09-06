@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Image as ImageIcon, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
-import { fileToCoverDataUrl } from "@/lib/notes-store";
+import { uploadCoverImage } from "@/lib/notes-store";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -19,7 +19,7 @@ export function CoverWallpaperField({ value, onChange, inputCls }: Props) {
     if (!file) return;
     setBusy(true);
     try {
-      onChange(await fileToCoverDataUrl(file));
+      onChange(await uploadCoverImage(file));
       toast.success("Cover wallpaper attached");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not read that image");

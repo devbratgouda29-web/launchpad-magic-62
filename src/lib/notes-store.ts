@@ -185,91 +185,70 @@ export async function deleteNote(id: string) {
 }
 
 /* ------------------------------------------------------------------ *
- * Local fallback storage
- * Used when the storage bucket rejects an upload (missing bucket, RLS,
- * size limits → HTTP 400). Files are kept as data URLs in localStorage
- * so publishing never fails outright.
+ * File storage — everything lives in the private `notes-bucket`.
+ * PDFs under `pdfs/`, cover wallpapers under `covers/`, sample pages
+ * under `previews/`. Files stream straight to storage (no base64, no
+ * localStorage), so there is no client-side size ceiling.
  * ------------------------------------------------------------------ */
 
-const LOCAL_FILES_KEY = "ftlb.localFiles.v1";
-const LOCAL_MAX_BYTES = 6 * 1024 * 1024; // keep well under localStorage quota
+const BUCKET = "notes-bucket";
+/** Signed-URL lifetime for cover images stored on the note row (10 years). */
+const COVER_URL_TTL = 60 * 60 * 24 * 365 * 10;
 
+/** Legacy local-storage paths from older uploads. */
 export function isLocalPath(path: string) {
   return path.startsWith("local:");
 }
 
-function readLocalFiles(): Record<string, string> {
-  if (typeof window === "undefined") return {};
+function readLegacyLocalFile(path: string): string | null {
+  if (typeof window === "undefined") return null;
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_FILES_KEY) ?? "{}") as Record<string, string>;
+    const all = JSON.parse(localStorage.getItem("ftlb.localFiles.v1") ?? "{}") as Record<
+      string,
+      string
+    >;
+    return all[path] ?? null;
   } catch {
-    return {};
+    return null;
   }
-}
-
-function writeLocalFile(path: string, dataUrl: string) {
-  if (typeof window === "undefined") throw new Error("No local storage available");
-  const all = readLocalFiles();
-  all[path] = dataUrl;
-  localStorage.setItem(LOCAL_FILES_KEY, JSON.stringify(all));
-}
-
-function readLocalFile(path: string): string | null {
-  return readLocalFiles()[path] ?? null;
-}
-
-function fileToDataUrl(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read the file"));
-    reader.readAsDataURL(file);
-  });
 }
 
 function safeName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-80);
 }
 
-/** Uploads a PDF to the private `notes-pdfs` bucket, falling back to local storage. */
-export async function uploadNotePdf(file: File): Promise<string> {
-  const path = `${Date.now()}-${safeName(file.name)}`;
-  try {
-    const { error } = await supabase.storage.from("notes-pdfs").upload(path, file, {
-      contentType: "application/pdf",
-      upsert: false,
-    });
-    if (error) throw error;
-    return path;
-  } catch (err) {
-    console.error("[upload] PDF upload to bucket failed", {
-      path,
-      size: file.size,
-      type: file.type,
-      error: err,
-    });
-    if (file.size > LOCAL_MAX_BYTES) {
-      throw new Error(
-        `Could not upload "${file.name}" (${(file.size / 1048576).toFixed(1)} MB). Please use a smaller PDF (under 6 MB).`,
-      );
-    }
-    try {
-      const dataUrl = await fileToDataUrl(file);
-      const localPath = `local:${path}`;
-      writeLocalFile(localPath, dataUrl);
-      console.warn("[upload] Saved PDF locally as fallback:", localPath);
-      return localPath;
-    } catch (e) {
-      console.error("[upload] Local PDF fallback failed", e);
-      throw new Error(err instanceof Error ? err.message : "PDF upload failed");
-    }
-  }
+function uniquePath(folder: string, name: string) {
+  return `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName(name)}`;
 }
 
-/** Signed URL for reading a stored chapter PDF (1 hour), or the local data URL. */
+/** Uploads a PDF straight to `notes-bucket/pdfs/`; returns the storage path. */
+export async function uploadNotePdf(file: File): Promise<string> {
+  const path = uniquePath("pdfs", file.name || "chapter.pdf");
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    contentType: file.type || "application/pdf",
+    upsert: false,
+  });
+  if (error) {
+    console.error("[upload] PDF upload failed", { path, size: file.size, error });
+    throw new Error(`Could not upload "${file.name}": ${error.message}`);
+  }
+  return path;
+}
+
+/** Bucket a stored path belongs to (older notes still point at the old buckets). */
+function pdfBucketFor(path: string) {
+  return path.startsWith("pdfs/") ? BUCKET : "notes-pdfs";
+}
+function previewBucketFor(path: string) {
+  return path.startsWith("previews/") ? BUCKET : "note-previews";
+}
+
+/** Signed URL for reading a stored chapter PDF (1 hour). */
 export async function signedPdfUrl(path: string): Promise<string | null> {
-  if (isLocalPath(path)) return readLocalFile(path);
-  const { data, error } = await supabase.storage.from("notes-pdfs").createSignedUrl(path, 3600);
+  if (isLocalPath(path)) return readLegacyLocalFile(path);
+  const { data, error } = await supabase.storage
+    .from(pdfBucketFor(path))
+    .createSignedUrl(path, 3600);
   if (error) console.error("[read] Could not sign PDF url", { path, error });
   return data?.signedUrl ?? null;
 }
@@ -290,11 +269,16 @@ export async function readPdfPageCount(file: File): Promise<number | null> {
   }
 }
 
-/** Downscales a picked image and returns a JPEG blob (keeps payloads small). */
-async function compressImage(file: File, maxWidth = 1400): Promise<Blob> {
+/** Downscales a picked image and returns a JPEG blob (keeps previews light). */
+async function compressImage(file: File, maxWidth = 1600): Promise<Blob> {
   if (typeof window === "undefined" || !file.type.startsWith("image/")) return file;
   try {
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("Could not read the image"));
+      reader.readAsDataURL(file);
+    });
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
@@ -309,7 +293,7 @@ async function compressImage(file: File, maxWidth = 1400): Promise<Blob> {
     if (!ctx) return file;
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((res) =>
-      canvas.toBlob((b) => res(b), "image/jpeg", 0.82),
+      canvas.toBlob((b) => res(b), "image/jpeg", 0.85),
     );
     return blob && blob.size < file.size ? blob : file;
   } catch (e) {
@@ -318,35 +302,21 @@ async function compressImage(file: File, maxWidth = 1400): Promise<Blob> {
   }
 }
 
-/** Uploads sample page screenshots to `note-previews`; returns storage paths. */
+/** Uploads sample page screenshots to `notes-bucket/previews/`; returns storage paths. */
 export async function uploadPreviewImages(files: File[]): Promise<string[]> {
   const paths: string[] = [];
   for (const file of files) {
     const body = await compressImage(file);
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName(file.name)}`;
-    try {
-      const { error } = await supabase.storage.from("note-previews").upload(path, body, {
-        contentType: body.type || "image/jpeg",
-        upsert: false,
-      });
-      if (error) throw error;
-      paths.push(path);
-    } catch (err) {
-      console.error("[upload] Preview image upload failed", {
-        path,
-        size: body.size,
-        type: body.type,
-        error: err,
-      });
-      try {
-        const localPath = `local:${path}`;
-        writeLocalFile(localPath, await fileToDataUrl(body));
-        paths.push(localPath);
-        console.warn("[upload] Saved preview locally as fallback:", localPath);
-      } catch (e) {
-        console.error("[upload] Local preview fallback failed", e);
-      }
+    const path = uniquePath("previews", file.name || "page.jpg");
+    const { error } = await supabase.storage.from(BUCKET).upload(path, body, {
+      contentType: body.type || "image/jpeg",
+      upsert: false,
+    });
+    if (error) {
+      console.error("[upload] Preview image upload failed", { path, error });
+      throw new Error(`Could not upload sample page "${file.name}": ${error.message}`);
     }
+    paths.push(path);
   }
   return paths;
 }
@@ -354,48 +324,47 @@ export async function uploadPreviewImages(files: File[]): Promise<string[]> {
 /** Signed URLs for the stored sample page screenshots (1 hour). */
 export async function signedPreviewUrls(paths: string[]): Promise<string[]> {
   if (paths.length === 0) return [];
+  const local = paths
+    .filter(isLocalPath)
+    .map(readLegacyLocalFile)
+    .filter((u): u is string => Boolean(u));
   const remote = paths.filter((p) => !isLocalPath(p));
-  const local = paths.filter(isLocalPath).map(readLocalFile);
-  let signed: string[] = [];
-  if (remote.length > 0) {
-    const { data, error } = await supabase.storage.from("note-previews").createSignedUrls(remote, 3600);
-    if (error) console.error("[read] Could not sign preview urls", error);
-    signed = (data ?? []).map((d) => d.signedUrl).filter((u): u is string => Boolean(u));
+  const groups = new Map<string, string[]>();
+  for (const p of remote) {
+    const b = previewBucketFor(p);
+    groups.set(b, [...(groups.get(b) ?? []), p]);
   }
-  return [...signed, ...local.filter((u): u is string => Boolean(u))];
+  const signed: string[] = [];
+  for (const [bucket, list] of groups) {
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrls(list, 3600);
+    if (error) console.error("[read] Could not sign preview urls", error);
+    for (const d of data ?? []) if (d.signedUrl) signed.push(d.signedUrl);
+  }
+  return [...signed, ...local];
 }
-
 
 /**
- * Reads a picked image file and returns a downscaled `data:image/jpeg;base64,…`
- * URL suitable for storing directly in `notes.cover_image_url`.
+ * Uploads a cover wallpaper to `notes-bucket/covers/` and returns a long-lived
+ * signed URL that can be stored directly in `notes.cover_image_url`.
  */
-export async function fileToCoverDataUrl(file: File, maxWidth = 1200): Promise<string> {
+export async function uploadCoverImage(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("Please choose an image file");
-  const dataUrl = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read the image"));
-    reader.readAsDataURL(file);
+  const body = await compressImage(file, 1600);
+  const path = uniquePath("covers", file.name || "cover.jpg");
+  const { error } = await supabase.storage.from(BUCKET).upload(path, body, {
+    contentType: body.type || "image/jpeg",
+    upsert: false,
   });
-  if (typeof window === "undefined") return dataUrl;
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("Invalid image"));
-      el.src = dataUrl;
-    });
-    const scale = Math.min(1, maxWidth / (img.naturalWidth || maxWidth));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round((img.naturalWidth || maxWidth) * scale);
-    canvas.height = Math.round((img.naturalHeight || maxWidth) * scale);
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return dataUrl;
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const out = canvas.toDataURL("image/jpeg", 0.82);
-    return out.length < dataUrl.length ? out : dataUrl;
-  } catch {
-    return dataUrl;
+  if (error) {
+    console.error("[upload] Cover image upload failed", { path, error });
+    throw new Error(`Could not upload the cover image: ${error.message}`);
   }
+  const { data, error: signError } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrl(path, COVER_URL_TTL);
+  if (signError || !data?.signedUrl) {
+    throw new Error(signError?.message ?? "Could not create a link for the cover image");
+  }
+  return data.signedUrl;
 }
+
