@@ -955,34 +955,17 @@ function RankTitleImg({
   unlocked?: boolean;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return (
-      <span
-        className={cn(
-          "flex max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase sm:text-lg",
-          !unlocked && "opacity-70 grayscale brightness-90",
-          className,
-        )}
-      >
-        {title}
-      </span>
-    );
-  }
   return (
-    <img
-      src={`/shields/title-${level}.png`}
-      alt={title}
-      loading="lazy"
-      decoding="async"
-      onError={() => setFailed(true)}
+    <span
+      data-rank-level={level}
       className={cn(
-        "block h-auto w-auto max-w-full object-contain drop-shadow-md select-none transition-all",
+        "flex min-w-0 max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase text-accent-amber drop-shadow-md transition-all sm:text-lg",
         !unlocked && "opacity-70 grayscale brightness-90",
         className,
       )}
-      draggable={false}
-    />
+    >
+      {title}
+    </span>
   );
 }
 

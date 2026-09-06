@@ -330,7 +330,7 @@ function OverviewTab({ habits }: { habits: HabitLite[] }) {
                 label={g?.label ?? ""}
                 tier={([1, 2, 3, 4, 5] as const)[Number(String(g?.key ?? "t1").slice(1)) - 1] ?? 1}
               />
-              <p className="flex max-w-full items-center justify-center whitespace-nowrap text-center text-base font-black uppercase sm:text-lg" style={{ color: g?.color }}>
+              <p className="max-w-full text-center text-[8px] font-black uppercase leading-tight tracking-[0.06em]" style={{ color: g?.color }}>
 
                 {g?.label}
               </p>
