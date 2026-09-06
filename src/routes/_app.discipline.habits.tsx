@@ -879,11 +879,13 @@ function RankModal({
             )}
           </div>
 
-          <RankTitleImg
-            level={milestone.level}
-            title={milestone.name}
-            unlocked={unlocked}
-          />
+          <div className="flex w-full items-center justify-center px-4 sm:px-6">
+            <RankTitleBanner
+              level={milestone.level}
+              title={milestone.name}
+              unlocked={unlocked}
+            />
+          </div>
 
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Lvl {milestone.level} · Required {milestone.streak} days
