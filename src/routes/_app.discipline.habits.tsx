@@ -75,7 +75,9 @@ function nextMilestone(streak: number): Milestone | null {
 }
 
 // ---------- Quotes ----------
-export { quotes } from "@/lib/quotes";
+import { quotes } from "@/lib/quotes";
+export { quotes };
+
 
 
 function pickQuote(prev?: string) {
