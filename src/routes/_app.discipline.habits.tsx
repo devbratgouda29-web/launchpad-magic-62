@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, lazy, Suspense } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, memo, Suspense } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -139,7 +139,6 @@ function HabitTrackerPage() {
   const [habits, setHabits] = useState<Habit[]>(() => defaultHabits());
   const [activeId, setActiveId] = useState<string>("");
   const [view, setView] = useState<View>("clock");
-  const [now, setNow] = useState<number>(() => Date.now());
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("🔥");
@@ -167,24 +166,25 @@ function HabitTrackerPage() {
     }
   }, [habits]);
 
-  // autonomous clock tick
+  // Check cycle boundaries independently of the visible one-second clock. This
+  // avoids re-rendering the entire page, tabs, and large artwork every second.
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    const roll = () => {
+      const currentTime = Date.now();
+      setHabits((prev) => {
+        let changed = false;
+        const next = prev.map((h) => {
+          const rolled = rollCycles(h, currentTime);
+          if (rolled !== h) changed = true;
+          return rolled;
+        });
+        return changed ? next : prev;
+      });
+    };
+    roll();
+    const id = window.setInterval(roll, 60_000);
     return () => window.clearInterval(id);
   }, []);
-
-  // auto-roll cycles when time crosses 24h boundary
-  useEffect(() => {
-    setHabits((prev) => {
-      let changed = false;
-      const next = prev.map((h) => {
-        const rolled = rollCycles(h, now);
-        if (rolled !== h) changed = true;
-        return rolled;
-      });
-      return changed ? next : prev;
-    });
-  }, [now]);
 
   // Re-pick quote only when active habit or view changes (never on interval)
   useEffect(() => {
@@ -197,6 +197,23 @@ function HabitTrackerPage() {
     () => habits.find((h) => h.id === activeId) ?? habits[0],
     [habits, activeId],
   );
+
+  // Warm the browser cache for only the ranks represented by the user's
+  // habits, keeping switches immediate without downloading the full gallery.
+  useEffect(() => {
+    const levels = new Set(habits.map((habit) => milestoneFor(habit.streak).level));
+    for (const level of levels) {
+      const shield = new Image();
+      shield.src = `/shields/shield-${level}.png`;
+      const title = new Image();
+      title.src = `/shields/title-${level}.png`;
+    }
+  }, [habits]);
+
+  const selectHabit = useCallback((id: string) => {
+    setActiveId(id);
+    setView("clock");
+  }, []);
 
   // ---------- Rank-up celebration ----------
   const [celebration, setCelebration] = useState<Milestone | null>(null);
@@ -313,10 +330,7 @@ function HabitTrackerPage() {
       <HabitTabs
         habits={habits}
         activeId={active.id}
-        onSelect={(id) => {
-          setActiveId(id);
-          setView("clock");
-        }}
+        onSelect={selectHabit}
       />
 
       {/* View switch */}
@@ -332,7 +346,6 @@ function HabitTrackerPage() {
       {view === "clock" ? (
         <ClockView
           habit={active}
-          now={now}
           quote={quote}
           onRelapse={() => setRelapseFor(active.id)}
           onDelete={() => removeHabit(active.id)}
@@ -438,7 +451,7 @@ function AddHabitForm({
   );
 }
 
-function HabitTabs({
+const HabitTabs = memo(function HabitTabs({
   habits,
   activeId,
   onSelect,
@@ -474,7 +487,7 @@ function HabitTabs({
       </div>
     </div>
   );
-}
+});
 
 function SwitchButton({
   active,
@@ -504,19 +517,24 @@ function SwitchButton({
 // ---------- Clock view ----------
 function ClockView({
   habit,
-  now,
   quote,
   onRelapse,
   onDelete,
 }: {
   habit: Habit;
-  now: number;
   quote: string;
   onRelapse: () => void;
   onDelete: () => void;
 }) {
+  const [now, setNow] = useState<number>(() => Date.now());
   const milestone = milestoneFor(habit.streak);
   const next = nextMilestone(habit.streak);
+
+  useEffect(() => {
+    setNow(Date.now());
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [habit.id]);
 
   const elapsed = Math.max(0, Math.min(DAY_MS, now - habit.startTs));
   const remainingMs = DAY_MS - elapsed;
@@ -587,12 +605,15 @@ function ClockView({
           </div>
         </div>
 
-        {/* Side-by-side rank identity: shield + title */}
-        <div className="flex w-full max-w-full items-center justify-center gap-3 px-2 sm:gap-4 sm:px-4">
-          <RankShieldImg level={milestone.level} unlocked className="h-24 max-h-24 w-auto" />
-          <div className="flex min-w-0 flex-1 items-center justify-center">
-            <RankTitleBanner level={milestone.level} title={milestone.name} unlocked />
-          </div>
+        {/* Current rank title artwork only; the large shield already appears above. */}
+        <div className="flex w-full max-w-full items-center justify-center px-1 sm:px-4">
+          <RankTitleBanner
+            level={milestone.level}
+            title={milestone.name}
+            unlocked
+            eager
+            className="max-h-12 sm:max-h-14"
+          />
         </div>
         <p className="max-w-sm text-center text-[13px] italic leading-relaxed text-muted-foreground">
           {milestone.desc}
