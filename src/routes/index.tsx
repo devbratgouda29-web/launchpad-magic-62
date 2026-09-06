@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { quotes } from "@/routes/_app.discipline.habits";
+import { quotes } from "@/lib/quotes";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
