@@ -19,7 +19,7 @@ export function CoverWallpaperField({ value, onChange, inputCls }: Props) {
     if (!file) return;
     setBusy(true);
     try {
-      onChange(await fileToCoverDataUrl(file));
+      onChange(await uploadCoverImage(file));
       toast.success("Cover wallpaper attached");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not read that image");
