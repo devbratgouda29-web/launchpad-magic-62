@@ -62,6 +62,27 @@ import {
   memberWeeklyHours,
 } from "@/lib/weekly-badge";
 import { getAllItems } from "@/lib/revision-engine";
+import { readGhostCounts } from "@/lib/report-data";
+import { dateKey } from "@/lib/weekly-badge";
+
+// Ghost tasks completed / assigned today for a council member. The current
+// user's counts come from the live mission diary + recall logs; simulated
+// allies fall back to their stored daily stats.
+function ghostStats(member: Member, isMe: boolean): { done: number; total: number } {
+  if (isMe) {
+    try {
+      const today = readGhostCounts()[dateKey(new Date())] ?? { cleared: 0, total: 0 };
+      return { done: today.cleared, total: Math.max(today.total, today.cleared) };
+    } catch {
+      /* fall through */
+    }
+  }
+  const done = member.daily.ghostsDone ?? member.daily.revisionCoresCleared;
+  const total =
+    member.daily.ghostsTotal ??
+    Math.max(done, Object.keys(member.daily.chapterCores ?? {}).length);
+  return { done, total };
+}
 
 // Enforced 5-tier core evolution names. Legacy stored values (Iron / Bronze /
 // Silver / Gold / Platinum / Diamond) are folded into the canonical set.
