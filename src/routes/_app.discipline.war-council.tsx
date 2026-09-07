@@ -49,7 +49,7 @@ import {
   type Council,
   type Member,
 } from "@/lib/council-store";
-import { TierShieldSVG } from "@/components/RankShield";
+import { ARMORY_GROUPS } from "@/lib/armory";
 import { WeeklyBadge } from "@/components/WeeklyBadge";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -62,6 +62,27 @@ import {
   memberWeeklyHours,
 } from "@/lib/weekly-badge";
 import { getAllItems } from "@/lib/revision-engine";
+import { readGhostCounts } from "@/lib/report-data";
+import { dateKey } from "@/lib/weekly-badge";
+
+// Ghost tasks completed / assigned today for a council member. The current
+// user's counts come from the live mission diary + recall logs; simulated
+// allies fall back to their stored daily stats.
+function ghostStats(member: Member, isMe: boolean): { done: number; total: number } {
+  if (isMe) {
+    try {
+      const today = readGhostCounts()[dateKey(new Date())] ?? { cleared: 0, total: 0 };
+      return { done: today.cleared, total: Math.max(today.total, today.cleared) };
+    } catch {
+      /* fall through */
+    }
+  }
+  const done = member.daily.ghostsDone ?? member.daily.revisionCoresCleared;
+  const total =
+    member.daily.ghostsTotal ??
+    Math.max(done, Object.keys(member.daily.chapterCores ?? {}).length);
+  return { done, total };
+}
 
 // Enforced 5-tier core evolution names. Legacy stored values (Iron / Bronze /
 // Silver / Gold / Platinum / Diamond) are folded into the canonical set.
@@ -88,14 +109,13 @@ function normalizeCoreTier(raw: string): CoreTierName {
   return LEGACY_CORE_ALIAS[raw] ?? "BRONZE CORE";
 }
 
-// Map a canonical core tier to a rank-shield level so badge visuals match
-// the Library section palette.
-const CORE_TIER_TO_RANK: Record<CoreTierName, number> = {
-  "BRONZE CORE": 2,
-  "IRON CORE": 5,
-  "STEEL SENTINEL": 8,
-  "TITANIUM WARDEN": 11,
-  "PLATINUM CORE": 15,
+// Map a canonical core tier to its Armory Wall 3D badge asset (/cores/tier-N.png).
+const CORE_TIER_TO_IMAGE: Record<CoreTierName, number> = {
+  "BRONZE CORE": 1,
+  "IRON CORE": 2,
+  "STEEL SENTINEL": 3,
+  "TITANIUM WARDEN": 4,
+  "PLATINUM CORE": 5,
 };
 
 export const Route = createFileRoute("/_app/discipline/war-council")({
@@ -633,12 +653,11 @@ function ArmoryModal({
             value={member.daily.tasksDone + " / " + member.daily.tasksTotal}
           />
           <Stat
-            label="Revision Cores"
-            value={
-              member.daily.revisionCoresCleared +
-              " / " +
-              Math.max(member.daily.revisionCoresCleared, liveEntries.length)
-            }
+            label="Ghost Tasks"
+            value={(() => {
+              const g = ghostStats(member, isMe);
+              return g.done + " / " + g.total;
+            })()}
           />
         </div>
         <div className="border-t border-border p-4">
@@ -652,7 +671,7 @@ function ArmoryModal({
           </div>
           <ul className="flex max-h-[52vh] flex-col gap-2 overflow-y-auto pr-1">
             {liveEntries.map(({ chapter, tier, loops }) => {
-              const rankLevel = CORE_TIER_TO_RANK[tier];
+              const tierNum = CORE_TIER_TO_IMAGE[tier];
               return (
                 <li
                   key={chapter}
@@ -666,7 +685,18 @@ function ArmoryModal({
                     </p>
                   </div>
                   <div className="relative shrink-0">
-                    <TierShieldSVG level={rankLevel} size={64} showNumber={false} />
+                    <img
+                      src={`/cores/tier-${tierNum}.png`}
+                      alt={tier}
+                      width={64}
+                      height={64}
+                      draggable={false}
+                      loading="lazy"
+                      className="block h-16 w-16 select-none object-contain"
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${ARMORY_GROUPS[tierNum - 1]?.glow ?? "rgba(255,255,255,0.35)"})`,
+                      }}
+                    />
                     {loops >= 1 && (
                       <span
                         className="absolute -right-1 -top-1 rounded-full border border-background bg-[oklch(0.72_0.28_25)] px-1.5 py-0.5 text-[10px] font-black leading-none text-white shadow-[0_0_10px_oklch(0.7_0.3_25/0.75)]"
@@ -1034,16 +1064,15 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
 
 
 function ReportPanel({ council }: { council: Council }) {
-  const data = useMemo(
-    () =>
-      council.members.map((m) => ({
-        name: m.name.length > 8 ? m.name.slice(0, 7) + "…" : m.name,
-        Focus: Math.round(m.daily.focusMinutes / 6) / 10,
-        Tasks: m.daily.tasksDone,
-        Cores: m.daily.revisionCoresCleared,
-      })),
-    [council],
-  );
+  const data = useMemo(() => {
+    const meTag = getMe().userTag;
+    return council.members.map((m) => ({
+      name: m.name.length > 8 ? m.name.slice(0, 7) + "…" : m.name,
+      Focus: Math.round(m.daily.focusMinutes / 6) / 10,
+      Tasks: m.daily.tasksDone,
+      "Ghost Tasks": ghostStats(m, m.userTag === meTag).done,
+    }));
+  }, [council]);
   return (
     <div className="flex flex-col gap-3">
       <div className="rounded-2xl border border-border bg-card p-4">
@@ -1074,12 +1103,12 @@ function ReportPanel({ council }: { council: Council }) {
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <Bar dataKey="Focus" fill="var(--primary)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Tasks" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Cores" fill="var(--foreground)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Ghost Tasks" fill="var(--foreground)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
-          Focus (h) · Tasks Slain · Revision Cores Cleared
+          Focus (h) · Tasks Slain · Ghost Tasks Cleared
         </p>
       </div>
 
