@@ -1103,12 +1103,12 @@ function ReportPanel({ council }: { council: Council }) {
               <Legend wrapperStyle={{ fontSize: 10 }} />
               <Bar dataKey="Focus" fill="var(--primary)" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Tasks" fill="var(--accent-amber)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Cores" fill="var(--foreground)" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Ghost Tasks" fill="var(--foreground)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
         <p className="mt-2 text-[10px] text-muted-foreground">
-          Focus (h) · Tasks Slain · Revision Cores Cleared
+          Focus (h) · Tasks Slain · Ghost Tasks Cleared
         </p>
       </div>
 
