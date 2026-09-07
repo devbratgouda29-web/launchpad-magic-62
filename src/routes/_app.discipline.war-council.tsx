@@ -653,12 +653,11 @@ function ArmoryModal({
             value={member.daily.tasksDone + " / " + member.daily.tasksTotal}
           />
           <Stat
-            label="Revision Cores"
-            value={
-              member.daily.revisionCoresCleared +
-              " / " +
-              Math.max(member.daily.revisionCoresCleared, liveEntries.length)
-            }
+            label="Ghost Tasks"
+            value={(() => {
+              const g = ghostStats(member, isMe);
+              return g.done + " / " + g.total;
+            })()}
           />
         </div>
         <div className="border-t border-border p-4">
@@ -1065,16 +1064,15 @@ function ImageLightbox({ src, onClose }: { src: string; onClose: () => void }) {
 
 
 function ReportPanel({ council }: { council: Council }) {
-  const data = useMemo(
-    () =>
-      council.members.map((m) => ({
-        name: m.name.length > 8 ? m.name.slice(0, 7) + "…" : m.name,
-        Focus: Math.round(m.daily.focusMinutes / 6) / 10,
-        Tasks: m.daily.tasksDone,
-        Cores: m.daily.revisionCoresCleared,
-      })),
-    [council],
-  );
+  const data = useMemo(() => {
+    const meTag = getMe().userTag;
+    return council.members.map((m) => ({
+      name: m.name.length > 8 ? m.name.slice(0, 7) + "…" : m.name,
+      Focus: Math.round(m.daily.focusMinutes / 6) / 10,
+      Tasks: m.daily.tasksDone,
+      "Ghost Tasks": ghostStats(m, m.userTag === meTag).done,
+    }));
+  }, [council]);
   return (
     <div className="flex flex-col gap-3">
       <div className="rounded-2xl border border-border bg-card p-4">
