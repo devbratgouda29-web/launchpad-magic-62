@@ -651,7 +651,7 @@ function ArmoryModal({
           </div>
           <ul className="flex max-h-[52vh] flex-col gap-2 overflow-y-auto pr-1">
             {liveEntries.map(({ chapter, tier, loops }) => {
-              const rankLevel = CORE_TIER_TO_RANK[tier];
+              const tierNum = CORE_TIER_TO_IMAGE[tier];
               return (
                 <li
                   key={chapter}
@@ -665,7 +665,18 @@ function ArmoryModal({
                     </p>
                   </div>
                   <div className="relative shrink-0">
-                    <TierShieldSVG level={rankLevel} size={64} showNumber={false} />
+                    <img
+                      src={`/cores/tier-${tierNum}.png`}
+                      alt={tier}
+                      width={64}
+                      height={64}
+                      draggable={false}
+                      loading="lazy"
+                      className="block h-16 w-16 select-none object-contain"
+                      style={{
+                        filter: `drop-shadow(0 0 10px ${ARMORY_GROUPS[tierNum - 1]?.glow ?? "rgba(255,255,255,0.35)"})`,
+                      }}
+                    />
                     {loops >= 1 && (
                       <span
                         className="absolute -right-1 -top-1 rounded-full border border-background bg-[oklch(0.72_0.28_25)] px-1.5 py-0.5 text-[10px] font-black leading-none text-white shadow-[0_0_10px_oklch(0.7_0.3_25/0.75)]"
