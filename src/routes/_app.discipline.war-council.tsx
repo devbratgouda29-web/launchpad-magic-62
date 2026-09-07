@@ -49,7 +49,7 @@ import {
   type Council,
   type Member,
 } from "@/lib/council-store";
-import { TierShieldSVG } from "@/components/RankShield";
+import { ARMORY_GROUPS } from "@/lib/armory";
 import { WeeklyBadge } from "@/components/WeeklyBadge";
 import { useAuth } from "@/hooks/use-auth";
 import {
