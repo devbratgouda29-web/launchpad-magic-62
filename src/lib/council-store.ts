@@ -18,6 +18,9 @@ export type MemberDailyStats = {
   tasksDone: number;
   tasksTotal: number;
   revisionCoresCleared: number;
+  // Ghost-task accountability: completed vs assigned for the day.
+  ghostsDone?: number;
+  ghostsTotal?: number;
   // e.g. { "Electrostatics": "PLATINUM CORE" }
   chapterCores: Record<string, string>;
   // completed re-loop count per chapter (0 = first pass, 1 = one re-loop, ...)

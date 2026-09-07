@@ -88,14 +88,13 @@ function normalizeCoreTier(raw: string): CoreTierName {
   return LEGACY_CORE_ALIAS[raw] ?? "BRONZE CORE";
 }
 
-// Map a canonical core tier to a rank-shield level so badge visuals match
-// the Library section palette.
-const CORE_TIER_TO_RANK: Record<CoreTierName, number> = {
-  "BRONZE CORE": 2,
-  "IRON CORE": 5,
-  "STEEL SENTINEL": 8,
-  "TITANIUM WARDEN": 11,
-  "PLATINUM CORE": 15,
+// Map a canonical core tier to its Armory Wall 3D badge asset (/cores/tier-N.png).
+const CORE_TIER_TO_IMAGE: Record<CoreTierName, number> = {
+  "BRONZE CORE": 1,
+  "IRON CORE": 2,
+  "STEEL SENTINEL": 3,
+  "TITANIUM WARDEN": 4,
+  "PLATINUM CORE": 5,
 };
 
 export const Route = createFileRoute("/_app/discipline/war-council")({
