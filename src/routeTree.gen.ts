@@ -18,6 +18,7 @@ import { Route as AppDisciplineRouteImport } from './routes/_app.discipline'
 import { Route as AppHomeRouteImport } from './routes/_app.home'
 import { Route as AppLibraryRouteImport } from './routes/_app.library'
 import { Route as AppPerformanceRouteImport } from './routes/_app.performance'
+import { Route as AppPricingRouteImport } from './routes/_app.pricing'
 import { Route as AppProfileRouteImport } from './routes/_app.profile'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ReaderNoteIdRouteImport } from './routes/reader.$noteId'
@@ -73,6 +74,11 @@ const AppLibraryRoute = AppLibraryRouteImport.update({
 const AppPerformanceRoute = AppPerformanceRouteImport.update({
   id: '/performance',
   path: '/performance',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPricingRoute = AppPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProfileRoute = AppProfileRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof AppHomeRoute
   '/library': typeof AppLibraryRoute
   '/performance': typeof AppPerformanceRoute
+  '/pricing': typeof AppPricingRoute
   '/profile': typeof AppProfileRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/reader/$noteId': typeof ReaderNoteIdRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/home': typeof AppHomeRoute
   '/library': typeof AppLibraryRoute
   '/performance': typeof AppPerformanceRoute
+  '/pricing': typeof AppPricingRoute
   '/profile': typeof AppProfileRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/reader/$noteId': typeof ReaderNoteIdRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_app/home': typeof AppHomeRoute
   '/_app/library': typeof AppLibraryRoute
   '/_app/performance': typeof AppPerformanceRoute
+  '/_app/pricing': typeof AppPricingRoute
   '/_app/profile': typeof AppProfileRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/reader/$noteId': typeof ReaderNoteIdRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/library'
     | '/performance'
+    | '/pricing'
     | '/profile'
     | '/auth/callback'
     | '/reader/$noteId'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/library'
     | '/performance'
+    | '/pricing'
     | '/profile'
     | '/auth/callback'
     | '/reader/$noteId'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/_app/home'
     | '/_app/library'
     | '/_app/performance'
+    | '/_app/pricing'
     | '/_app/profile'
     | '/auth/callback'
     | '/reader/$noteId'
@@ -345,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/performance'
       fullPath: '/performance'
       preLoaderRoute: typeof AppPerformanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pricing': {
+      id: '/_app/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof AppPricingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/profile': {
@@ -464,6 +483,7 @@ interface AppRouteChildren {
   AppHomeRoute: typeof AppHomeRoute
   AppLibraryRoute: typeof AppLibraryRoute
   AppPerformanceRoute: typeof AppPerformanceRoute
+  AppPricingRoute: typeof AppPricingRoute
   AppProfileRoute: typeof AppProfileRoute
   AppNotesNoteIdRoute: typeof AppNotesNoteIdRoute
 }
@@ -474,6 +494,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHomeRoute: AppHomeRoute,
   AppLibraryRoute: AppLibraryRoute,
   AppPerformanceRoute: AppPerformanceRoute,
+  AppPricingRoute: AppPricingRoute,
   AppProfileRoute: AppProfileRoute,
   AppNotesNoteIdRoute: AppNotesNoteIdRoute,
 }
